@@ -1,9 +1,10 @@
+
 "use client";
 
 import type { UserProfile } from '@/types';
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-// import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-// import { doc, getDoc } from 'firebase/firestore';
+// import { onAuthStateChanged, User as FirebaseUser, signOut as firebaseSignOut } from 'firebase/auth'; // Actual Firebase
+// import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'; // Actual Firebase
 // import { auth, db } from '@/lib/firebase'; // Actual Firebase imports
 
 // Placeholder for Firebase user type and auth service
@@ -20,6 +21,7 @@ interface AuthContextType {
   firebaseUser: FirebaseUser | null;
   loading: boolean;
   isAdmin: boolean; // Convenience getter
+  signOut: () => Promise<void>; // Added signOut
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -34,46 +36,62 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // const unsubscribe = onAuthStateChanged(auth, async (fbUser) => { // Actual Firebase
-    const unsubscribe = placeholderAuth.onAuthStateChanged(async (fbUser: FirebaseUser | null) => { // Placeholder Firebase
+    const unsubscribe = placeholderAuth.onAuthStateChanged(async (fbUser: FirebaseUser | null) => { 
       if (fbUser) {
         setFirebaseUser(fbUser);
-        // Fetch user profile from Firestore
+        
+        // Placeholder for fetching or creating user profile
         // const userDocRef = doc(db, 'users', fbUser.uid); // Actual Firebase
         // const userDocSnap = await getDoc(userDocRef); // Actual Firebase
         
-        // Placeholder for fetching user profile
-        const userDocSnap = {
-          exists: () => true,
-          data: () => ({
-            uid: fbUser.uid,
-            email: fbUser.email,
-            displayName: fbUser.displayName,
-            photoURL: fbUser.photoURL,
-            role: fbUser.email?.includes('admin') ? 'admin' : 'client', // Simple role logic for placeholder
-            createdAt: new Date(),
+        let userDocData: UserProfile | null = null;
+        
+        // Simulate Firestore fetch
+        await new Promise(resolve => setTimeout(resolve, 200)); // simulate delay
+        const mockProfileStore: { [key: string]: UserProfile } = {
+          '123': { // Assuming '123' is a common test UID from placeholderAuth
+            uid: '123',
+            email: 'test@example.com',
+            displayName: 'Test User',
+            photoURL: 'https://placehold.co/100x100.png?text=TU',
+            role: 'client', // Default to client for testing onboarding
+            createdAt: new Date(Date.now() - 100000),
             updatedAt: new Date(),
-            onboardingCompleted: false,
-          } as UserProfile)
+            onboardingCompleted: false, // Set to false to test onboarding flow initially
+          },
+           'admin-user-uid': {
+            uid: 'admin-user-uid', // A UID that might be used for admin
+            email: 'admin@example.com',
+            displayName: 'Admin User',
+            photoURL: 'https://placehold.co/100x100.png?text=AU',
+            role: 'admin',
+            createdAt: new Date(Date.now() - 100000),
+            updatedAt: new Date(),
+            onboardingCompleted: true, // Admins likely skip client onboarding
+          }
         };
+        
+        // Try to get a profile; if fbUser.uid is 'admin-user-uid', use that, otherwise try '123'
+        userDocData = fbUser.email?.includes('admin') ? mockProfileStore['admin-user-uid'] : mockProfileStore[fbUser.uid] || null;
 
-
-        if (userDocSnap.exists()) {
-          setUserProfile(userDocSnap.data() as UserProfile);
+        if (userDocData) {
+          setUserProfile(userDocData);
         } else {
-          // Handle case where user exists in Auth but not Firestore (e.g., create profile)
-          // For now, just set to null or a default client profile
-          const defaultProfile: UserProfile = {
+          // If no specific mock, create a default one based on fbUser
+          const newProfile: UserProfile = {
             uid: fbUser.uid,
             email: fbUser.email,
-            displayName: fbUser.displayName,
-            photoURL: fbUser.photoURL,
-            role: 'client',
+            displayName: fbUser.displayName || `User ${fbUser.uid.substring(0,5)}`,
+            photoURL: fbUser.photoURL || `https://placehold.co/100x100.png?text=${fbUser.displayName ? fbUser.displayName[0] : 'U'}`,
+            role: fbUser.email?.includes('admin@example.com') ? 'admin' : 'client', // Role determination
             createdAt: new Date(),
             updatedAt: new Date(),
+            onboardingCompleted: false, // Default for new users
           };
-          setUserProfile(defaultProfile);
-          // Potentially create this doc in Firestore here
+          // In a real app, save this newProfile to Firestore:
+          // await setDoc(userDocRef, { ...newProfile, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+          setUserProfile(newProfile);
+          mockProfileStore[fbUser.uid] = newProfile; // Add to mock store for session consistency
         }
       } else {
         setFirebaseUser(null);
@@ -85,10 +103,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return () => unsubscribe();
   }, []);
 
+  const handleSignOut = async () => {
+    setLoading(true);
+    // await firebaseSignOut(auth); // Actual Firebase
+    await placeholderAuth.signOut(); // Placeholder Firebase
+    setFirebaseUser(null);
+    setUserProfile(null);
+    setLoading(false);
+  };
+
   const isAdmin = userProfile?.role === 'admin';
 
   return (
-    <AuthContext.Provider value={{ user: userProfile, firebaseUser, loading, isAdmin }}>
+    <AuthContext.Provider value={{ user: userProfile, firebaseUser, loading, isAdmin, signOut: handleSignOut }}>
       {children}
     </AuthContext.Provider>
   );
