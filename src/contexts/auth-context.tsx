@@ -20,8 +20,8 @@ interface AuthContextType {
   user: UserProfile | null;
   firebaseUser: FirebaseUser | null;
   loading: boolean;
-  isAdmin: boolean; // Convenience getter
-  signOut: () => Promise<void>; // Added signOut
+  isAdmin: boolean;
+  signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -30,6 +30,41 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
+// Extended mock store for better testing
+const mockProfileStore: { [key: string]: UserProfile } = {
+  'default-client-uid': { 
+    uid: 'default-client-uid',
+    email: 'client@example.com',
+    displayName: 'Client User',
+    photoURL: 'https://placehold.co/100x100.png?text=CU',
+    role: 'client',
+    createdAt: new Date(Date.now() - 200000),
+    updatedAt: new Date(),
+    onboardingCompleted: false, 
+  },
+  'onboarded-client-uid': { 
+    uid: 'onboarded-client-uid',
+    email: 'onboarded@example.com',
+    displayName: 'Onboarded Client',
+    photoURL: 'https://placehold.co/100x100.png?text=OC',
+    role: 'client',
+    createdAt: new Date(Date.now() - 200000),
+    updatedAt: new Date(),
+    onboardingCompleted: true, 
+  },
+   'admin-user-uid': {
+    uid: 'admin-user-uid',
+    email: 'admin@example.com',
+    displayName: 'Admin User',
+    photoURL: 'https://placehold.co/100x100.png?text=AU',
+    role: 'admin',
+    createdAt: new Date(Date.now() - 100000),
+    updatedAt: new Date(),
+    onboardingCompleted: true,
+  }
+};
+
+
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -37,61 +72,42 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   useEffect(() => {
     const unsubscribe = placeholderAuth.onAuthStateChanged(async (fbUser: FirebaseUser | null) => { 
+      setLoading(true); // Set loading true at the start of auth state change
       if (fbUser) {
         setFirebaseUser(fbUser);
         
-        // Placeholder for fetching or creating user profile
-        // const userDocRef = doc(db, 'users', fbUser.uid); // Actual Firebase
-        // const userDocSnap = await getDoc(userDocRef); // Actual Firebase
+        await new Promise(resolve => setTimeout(resolve, 200)); // simulate delay
         
         let userDocData: UserProfile | null = null;
-        
-        // Simulate Firestore fetch
-        await new Promise(resolve => setTimeout(resolve, 200)); // simulate delay
-        const mockProfileStore: { [key: string]: UserProfile } = {
-          '123': { // Assuming '123' is a common test UID from placeholderAuth
-            uid: '123',
-            email: 'test@example.com',
-            displayName: 'Test User',
-            photoURL: 'https://placehold.co/100x100.png?text=TU',
-            role: 'client', // Default to client for testing onboarding
-            createdAt: new Date(Date.now() - 100000),
-            updatedAt: new Date(),
-            onboardingCompleted: false, // Set to false to test onboarding flow initially
-          },
-           'admin-user-uid': {
-            uid: 'admin-user-uid', // A UID that might be used for admin
-            email: 'admin@example.com',
-            displayName: 'Admin User',
-            photoURL: 'https://placehold.co/100x100.png?text=AU',
-            role: 'admin',
-            createdAt: new Date(Date.now() - 100000),
-            updatedAt: new Date(),
-            onboardingCompleted: true, // Admins likely skip client onboarding
-          }
-        };
-        
-        // Try to get a profile; if fbUser.uid is 'admin-user-uid', use that, otherwise try '123'
-        userDocData = fbUser.email?.includes('admin') ? mockProfileStore['admin-user-uid'] : mockProfileStore[fbUser.uid] || null;
+
+        // Prioritize specific mock UIDs for consistent testing
+        if (mockProfileStore[fbUser.uid]) {
+            userDocData = mockProfileStore[fbUser.uid];
+        } else if (fbUser.email?.includes('admin')) { // Fallback for generic admin email
+            userDocData = mockProfileStore['admin-user-uid'];
+            if (userDocData) userDocData.uid = fbUser.uid; // Align UID
+        } else { // Fallback for generic client email
+            userDocData = mockProfileStore['default-client-uid'];
+             if (userDocData) userDocData.uid = fbUser.uid; // Align UID
+        }
+
 
         if (userDocData) {
-          setUserProfile(userDocData);
+          setUserProfile({...userDocData, email: fbUser.email, displayName: fbUser.displayName, photoURL: fbUser.photoURL });
         } else {
-          // If no specific mock, create a default one based on fbUser
+          // Create a new default profile if no match
           const newProfile: UserProfile = {
             uid: fbUser.uid,
             email: fbUser.email,
             displayName: fbUser.displayName || `User ${fbUser.uid.substring(0,5)}`,
             photoURL: fbUser.photoURL || `https://placehold.co/100x100.png?text=${fbUser.displayName ? fbUser.displayName[0] : 'U'}`,
-            role: fbUser.email?.includes('admin@example.com') ? 'admin' : 'client', // Role determination
+            role: fbUser.email?.includes('admin@example.com') ? 'admin' : 'client',
             createdAt: new Date(),
             updatedAt: new Date(),
-            onboardingCompleted: false, // Default for new users
+            onboardingCompleted: fbUser.email?.includes('admin@example.com') ? true : false, // Admins are onboarded by default
           };
-          // In a real app, save this newProfile to Firestore:
-          // await setDoc(userDocRef, { ...newProfile, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
           setUserProfile(newProfile);
-          mockProfileStore[fbUser.uid] = newProfile; // Add to mock store for session consistency
+          mockProfileStore[fbUser.uid] = newProfile; // Add to mock store
         }
       } else {
         setFirebaseUser(null);
@@ -105,11 +121,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const handleSignOut = async () => {
     setLoading(true);
-    // await firebaseSignOut(auth); // Actual Firebase
-    await placeholderAuth.signOut(); // Placeholder Firebase
-    setFirebaseUser(null);
-    setUserProfile(null);
-    setLoading(false);
+    await placeholderAuth.signOut();
+    // No need to setFirebaseUser/setUserProfile to null here, 
+    // onAuthStateChanged will trigger and handle it.
+    // setLoading(false); // onAuthStateChanged will set loading to false
   };
 
   const isAdmin = userProfile?.role === 'admin';

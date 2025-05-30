@@ -1,3 +1,4 @@
+
 import type { Timestamp } from 'firebase/firestore'; // Assuming Firebase
 
 export interface Agent {
@@ -73,6 +74,8 @@ export interface Interaction {
     isSafe: boolean;
     reason?: string;
     moderatedAt: Timestamp | Date;
+    moderatedBy?: string; // e.g., 'admin_user_id' or 'system'
+    typeModerated?: 'input' | 'output'; // Which part was moderated
   };
   feedback?: {
     rating?: 1 | 2 | 3 | 4 | 5;

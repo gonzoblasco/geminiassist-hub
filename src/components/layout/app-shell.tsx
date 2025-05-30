@@ -18,18 +18,18 @@ import {
 import { Button } from '@/components/ui/button';
 import { UserNav } from './user-nav';
 import { MainNav, type NavItem } from './main-nav';
-import { Zap, Settings, LogOut, UserCircle, LayoutDashboard, BotMessageSquare, Users, ShieldAlert, BadgeDollarSign, Contact, LifeBuoy } from 'lucide-react'; // Added Contact, LifeBuoy
-import { useAuth } from '@/contexts/auth-context'; // Conceptual
+import { Zap, Settings, LogOut, UserCircle, LayoutDashboard, BotMessageSquare, Users, ShieldAlert, BadgeDollarSign, Contact, LifeBuoy, MessageSquareQuote, FileText } from 'lucide-react'; // Added MessageSquareQuote, FileText
+import { useAuth } from '@/contexts/auth-context';
 import { useRouter, usePathname } from 'next/navigation';
 
 interface AppShellProps {
   children: ReactNode;
   navItems: NavItem[];
-  userRole?: 'client' | 'admin'; // To customize sidebar content
+  userRole?: 'client' | 'admin';
 }
 
 export function AppShell({ children, navItems, userRole }: AppShellProps) {
-  const { user, loading, signOut } = useAuth(); // Conceptual, added signOut
+  const { user, loading, signOut } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -37,13 +37,12 @@ export function AppShell({ children, navItems, userRole }: AppShellProps) {
     if (!loading && !user) {
       router.replace('/login');
     }
-    // Redirect to onboarding if not completed and not already on onboarding or admin pages
     if (!loading && user && !user.onboardingCompleted && pathname !== '/onboarding' && userRole !== 'admin' && !pathname.startsWith('/admin')) {
         router.replace('/onboarding');
     }
   }, [user, loading, router, pathname, userRole]);
 
-  if (loading || (!user && pathname !== '/login' && !pathname.startsWith('/public'))) { // Allow public pages if any
+  if (loading || (!user && pathname !== '/login' && !pathname.startsWith('/public'))) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <Zap className="h-12 w-12 animate-pulse text-primary" />
@@ -57,7 +56,7 @@ export function AppShell({ children, navItems, userRole }: AppShellProps) {
   const defaultOpen = true; 
 
   const handleSignOut = async () => {
-    await signOut(); // Call the signOut method from useAuth
+    await signOut();
     router.push('/login');
   };
 
@@ -111,7 +110,7 @@ export function AppShell({ children, navItems, userRole }: AppShellProps) {
             </div>
             <UserNav />
         </header>
-        <main className="flex-1 p-4 md:p-6 lg:p-8 bg-muted/30 min-h-[calc(100vh-4rem)]"> {/* Added min-height and slight bg change */}
+        <main className="flex-1 p-4 md:p-6 lg:p-8 bg-muted/30 min-h-[calc(100vh-4rem)]">
           {children}
         </main>
       </SidebarInset>
@@ -119,18 +118,19 @@ export function AppShell({ children, navItems, userRole }: AppShellProps) {
   );
 }
 
-// Define specific navigation items
 export const clientNavItems: NavItem[] = [
   { title: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, exactMatch: true },
   { title: 'Agentes IA', href: '/agents', icon: BotMessageSquare },
   { title: 'Suscripciones', href: '/subscriptions', icon: BadgeDollarSign },
-  { title: 'Ayuda', href: '/help', icon: LifeBuoy }, // Added Help
-  { title: 'Contacto', href: '/contact', icon: Contact }, // Added Contact
+  { title: 'Ayuda', href: '/help', icon: LifeBuoy },
+  { title: 'Contacto', href: '/contact', icon: Contact },
 ];
 
 export const adminNavItems: NavItem[] = [
   { title: 'Dashboard', href: '/admin', icon: LayoutDashboard, exactMatch: true },
   { title: 'Gestión de Agentes', href: '/admin/agents', icon: BotMessageSquare },
   { title: 'Gestión de Usuarios', href: '/admin/users', icon: Users },
+  { title: 'Suscripciones', href: '/admin/subscriptions', icon: FileText }, // New
   { title: 'Moderación', href: '/admin/moderation', icon: ShieldAlert },
+  { title: 'Feedback', href: '/admin/feedback', icon: MessageSquareQuote }, // New
 ];
