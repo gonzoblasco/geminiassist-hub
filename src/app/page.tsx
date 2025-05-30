@@ -66,6 +66,7 @@ export default function LandingPage() {
                 height="400"
                 alt="AI Agent Showcase"
                 data-ai-hint="abstract technology"
+                priority
                 className="mx-auto aspect-video overflow-hidden rounded-xl object-cover sm:w-full lg:order-last"
               />
             </div>

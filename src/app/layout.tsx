@@ -21,14 +21,13 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
         <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet" />
-        {/* Basic PWA meta tags */}
         <meta name="application-name" content="GeminiAssist Hub" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="GeminiAssist Hub" />
         <meta name="format-detection" content="telephone=no" />
         <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="theme-color" content="#6639A6" /> {/* Primary color */}
+        <meta name="theme-color" content="#6639A6" />
       </head>
       <body className="font-body antialiased">
         <AuthProvider> {/* Conceptual: wraps app with auth state */}
